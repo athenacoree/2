@@ -1,0 +1,15 @@
+PATIENT RECORDS POLICY - MEDAUTHAGENT CORE STANDARDS
+Patient Name: Jane Doe
+Date of Birth: 1985-05-12
+Policy Number: POL-9988223
+Insurance Company: GlobalCare Health Insurance
+Primary Care Physician: Dr. Robert Carter, MD
+
+COVERAGE STANDARDS AND POLICIES (GlobalCare 2025 Standard Policy)
+- Outpatient surgical procedures require pre-authorization at least 72 hours in advance.
+- Pre-authorization is valid for 60 days from approval.
+- Clinical justification must show failure of conservative therapy (e.g., 6 weeks of physical therapy).
+- MRI and advanced imaging are covered only if progressive neurological deficit is present or after 6 weeks of conservative treatment.
+- Multi-disciplinary team notes and fully documented history of conservative management are required.
+- Standard exclusion: Experimental procedures or non-medically necessary treatments.
+- Regulation: Compliance with HIPAA and state authorization timelines (72 hours for urgent, 14 days for standard).

@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: med-auth-agent
+    env: python
+    buildCommand: "pip install uv && uv pip install -e ."
+    startCommand: "uv run streamlit run src/med_auth_agent/app.py --server.port $PORT --server.address 0.0.0.0"
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "meta-llama/llama-3.3-70b-instruct"
+      - key: OPENROUTER_BASE_URL
+        value: "https://openrouter.ai/api/v1"
+      - key: OPENAI_API_BASE
+        value: "https://openrouter.ai/api/v1"
+      - key: OPENAI_API_KEY
+        sync: false
