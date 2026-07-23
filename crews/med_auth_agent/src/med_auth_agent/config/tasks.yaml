@@ -1,0 +1,23 @@
+analyze_medical_request_task:
+  description: >
+    Analyze the uploaded clinical records and insurance policy documents.
+    You must evaluate a minimum of 105 distinct medical criteria points across 7 mandatory categories:
+    1. Datos del paciente (Patient demographics and identification details, evaluate at least 15 points)
+    2. Cobertura de la póliza (Insurance coverage, deductibles, active status, etc., evaluate at least 15 points)
+    3. Documentación presentada (Completeness of reports, clinical notes, referrals, evaluate at least 15 points)
+    4. Requisitos de la aseguradora (Conservative treatments, prior imaging requirements, etc., evaluate at least 15 points)
+    5. Cumplimiento y regulaciones (Regulatory timelines, HIPAA, professional signatures, evaluate at least 15 points)
+    6. Análisis de riesgos (Risk profiles, safety factors, contraindications, evaluate at least 15 points)
+    7. Factores de decisión (Clinical necessity, diagnostic alignment, provider qualifications, evaluate at least 15 points)
+
+    For each of the 105 points, you must specify:
+    - name: A specific, descriptive name for the individual point (e.g., 'Verificación de nombre de paciente', 'Cumplimiento de terapia conservadora de 6 semanas')
+    - value: The exact evidence or value parsed from the files (or 'No encontrado')
+    - status: 'Cumple' if the criteria is met/satisfied/documented, or 'No Cumple' if missing, insufficient, or failed
+    - explanation: A robust explanation of why it complies or fails based on the documents.
+
+    Make a final decision ('Aprobado' if critical medical criteria are met, otherwise 'Denegado') with a confidence score (0-100%).
+    Provide a detailed explanation of why the decision was taken, the evidence, and clear user action-oriented recommendations.
+  expected_output: >
+    A fully structured JSON matching the DecisionReport schema containing exactly 105 evaluated criteria points across the 7 categories, the final decision, confidence percentage, summary, evidence, and recommendations.
+  agent: med_auth_officer

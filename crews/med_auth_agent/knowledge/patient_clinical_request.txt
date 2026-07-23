@@ -1,0 +1,22 @@
+CLINICAL SUMMARY AND AUTHORIZATION REQUEST
+Patient: Jane Doe
+DOB: 1985-05-12
+Policy: POL-9988223
+Diagnosis: Severe Lumbar Disc Herniation with Radiculopathy (M51.16)
+Requested Procedure: Lumbar Microdiscectomy (CPT 63030)
+Requesting Provider: Dr. Sarah Jenkins, MD (Neurosurgeon)
+
+Clinical History:
+- Patient presents with severe lower back pain radiating down the left leg (sciatica) for the past 8 weeks.
+- Pain level: 8/10. Pain limits standing and walking to less than 10 minutes.
+- Conservative Treatment History:
+  * Completed 6 weeks of structured physical therapy (from Jan 15, 2025 to Feb 26, 2025) with no significant improvement in pain or function.
+  * Attempted NSAIDs (Ibuprofen 800mg TID) and Gabapentin 300mg TID with minimal relief.
+- Physical Examination:
+  * Positive left straight leg raise at 30 degrees.
+  * Decreased sensation in left L5 dermatome.
+  * Left dorsiflexion strength: 4/5 (mild weakness).
+- Advanced Imaging (MRI Lumbar Spine dated Feb 20, 2025):
+  * Large left paracentral disc extrusion at L4-L5 causing severe compression of the left L5 nerve root.
+- Clinical Justification:
+  * Lumbar microdiscectomy is medically necessary due to persistent severe radicular pain and progressive neurological deficit (motor weakness of 4/5 in left dorsiflexion) that has failed to improve with conservative management (>6 weeks of physical therapy and medications).
