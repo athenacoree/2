@@ -1,23 +1,56 @@
-analyze_medical_request_task:
+patient_intake_task:
   description: >
-    Analyze the uploaded clinical records and insurance policy documents.
-    You must evaluate a minimum of 105 distinct medical criteria points across 7 mandatory categories:
-    1. Datos del paciente (Patient demographics and identification details, evaluate at least 15 points)
-    2. Cobertura de la póliza (Insurance coverage, deductibles, active status, etc., evaluate at least 15 points)
-    3. Documentación presentada (Completeness of reports, clinical notes, referrals, evaluate at least 15 points)
-    4. Requisitos de la aseguradora (Conservative treatments, prior imaging requirements, etc., evaluate at least 15 points)
-    5. Cumplimiento y regulaciones (Regulatory timelines, HIPAA, professional signatures, evaluate at least 15 points)
-    6. Análisis de riesgos (Risk profiles, safety factors, contraindications, evaluate at least 15 points)
-    7. Factores de decisión (Clinical necessity, diagnostic alignment, provider qualifications, evaluate at least 15 points)
-
-    For each of the 105 points, you must specify:
-    - name: A specific, descriptive name for the individual point (e.g., 'Verificación de nombre de paciente', 'Cumplimiento de terapia conservadora de 6 semanas')
-    - value: The exact evidence or value parsed from the files (or 'No encontrado')
-    - status: 'Cumple' if the criteria is met/satisfied/documented, or 'No Cumple' if missing, insufficient, or failed
-    - explanation: A robust explanation of why it complies or fails based on the documents.
-
-    Make a final decision ('Aprobado' if critical medical criteria are met, otherwise 'Denegado') with a confidence score (0-100%).
-    Provide a detailed explanation of why the decision was taken, the evidence, and clear user action-oriented recommendations.
+    Extract and structure complete patient information from the provided medical documents and clinical files.
+    Parse and document exactly:
+    - Patient Name, ID/Policy reference, date of birth, age, gender.
+    - Main symptoms, primary diagnosis, secondary diagnosis, date of diagnosis.
+    - Detailed medical history, allergies, and currently active medications.
+    Ensure everything is organized into a clean structured format.
   expected_output: >
-    A fully structured JSON matching the DecisionReport schema containing exactly 105 evaluated criteria points across the 7 categories, the final decision, confidence percentage, summary, evidence, and recommendations.
-  agent: med_auth_officer
+    A structured record of the patient's demographics, clinical history, and symptoms.
+  agent: patient_intake_agent
+
+insurance_authorization_task:
+  description: >
+    Analyze the patient's diagnosis and requested procedure against the insurance policy document.
+    Perform a complete clinical-policy cross-reference to:
+    - Check if the requested procedure is covered.
+    - Identify annual limits, applied deductibles, copays, and provider network rules.
+    - Identify exclusions, pre-existing condition terms, and waiting periods.
+    - Identify any missing documents or requisites required by the insurer's policy rules.
+  expected_output: >
+    A complete coverage verification analysis report detailing limits, exclusions, and missing clinical elements.
+  agent: insurance_authorization_agent
+
+clinical_scribing_task:
+  description: >
+    Convert any unstructured narratives, transcripts, or patient notes into highly formatted, standard clinical notes.
+    Extract, standardize, and validate all relevant medical codes, explicitly locating:
+    - ICD-10 diagnostic codes.
+    - CPT procedure codes.
+  expected_output: >
+    Formatted clinical notes and a validated list of ICD-10 and CPT codes.
+  agent: clinical_scribing_agent
+
+decision_task:
+  description: >
+    Synthesize all clinical records, coverage verification, and coding analyses to perform an extensive evaluation
+    of more than 100 points across the 7 mandatory categories:
+    1. Datos del paciente (Evaluate at least 15 points: e.g., name, ID, date of birth, age, gender, primary/secondary diagnosis, diagnosis date, medical history, allergies, current medications, etc.)
+    2. Cobertura de la póliza (Evaluate at least 15 points: e.g., procedure covered, annual limit, applied deductible, copay required, provider network, preauth required, exclusions, pre-existing conditions, waiting period, automatic renewal, etc.)
+    3. Documentación presentada (Evaluate at least 15 points: e.g., medical referral, specialist notes, lab tests, medical imaging, hospitalization report, informed consent, treatment history, justification of procedure, alternatives considered, risk evaluation, etc.)
+    4. Requisitos de la aseguradora (Evaluate at least 15 points: e.g., required documentation, response timeframe, application format, approval criteria, denial criteria, appeal procedure, insurer contact, accepted language, signature required, institutional seal, etc.)
+    5. Cumplimiento y regulaciones (Evaluate at least 15 points: e.g., HIPAA compliance, privacy laws, GDPR, policy compliance, local regulations, medical licenses, center certifications, staff accreditations, security protocols, sensitive data handling, etc.)
+    6. Análisis de riesgos (Evaluate at least 15 points: e.g., denial risk, appeal risk, compliance risk, fraud risk, administrative error risk, incomplete documentation risk, policy interpretation risk, regulatory update risk, partial approval risk, delay risk, etc.)
+    7. Factores de decisión (Evaluate at least 15 points: e.g., medical urgency, clinical necessity, cost effectiveness, alternative available, scientific evidence, specialist opinion, insurer history, approval trend, geographic coverage, provider network, etc.)
+
+    For each evaluated point, provide:
+    - name: specific, descriptive name (e.g. 'Verificación de nombre de paciente', 'Riesgo de denegación por falta de RM')
+    - value: parsed evidence or value (or 'No encontrado')
+    - status: 'Cumple' or 'No Cumple'
+    - explanation: concise reason for the status
+
+    Generate a final decision ('Aprobado' or 'Denegado'), calculate a confidence score (0-100%), and produce a detailed explanation summary of the decision, key evidence supporting it, and user-actionable recommendations.
+  expected_output: >
+    A fully structured JSON matching the DecisionReport schema with at least 105 total evaluated points across the 7 categories, final decision, confidence percentage, summary, evidence, and recommendations.
+  agent: decision_agent

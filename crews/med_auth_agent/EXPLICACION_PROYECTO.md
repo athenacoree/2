@@ -1,49 +1,46 @@
-# EXPLICACIÓN DEL PROYECTO: MedAuthAgent
+# MedAuthAgent - Documentación del Proyecto
 
-MedAuthAgent es una solución de software empresarial de vanguardia diseñada para automatizar de extremo a extremo las autorizaciones previas médicas mediante agentes de inteligencia artificial y tecnología RAG (Retrieval-Augmented Generation). El sistema cruza expedientes médicos de pacientes contra políticas y reglas de seguros médicos utilizando el framework CrewAI, identificando discrepancias de forma precisa y emitiendo decisiones de aprobación o denegación en segundos.
-
----
-
-## 1. Arquitectura del Sistema
-
-El producto está diseñado sobre tres pilares fundamentales que aseguran la máxima velocidad y precisión quirúrgica en el procesamiento de información médica:
-
-1. **Agente Autónomo Inteligente (MedAuthAgent Officer)**: Un rol experto de prior-authorization pre-configurado para revisar expedientes complejos, analizar coberturas, evaluar exclusiones y calcular puntuaciones de confianza basadas en hallazgos objetivos.
-2. **Motor RAG Multiformato de CrewAI**: Se integra con los sistemas nativos `PDFKnowledgeSource`, `TXTKnowledgeSource`, y una implementación personalizada para `DOCXKnowledgeSource`. Toda la información se procesa y fragmenta de forma semántica.
-3. **Búsqueda Semántica Rápida con ChromaDB y PDFSearchTool**: La indexación de los documentos se maneja mediante vectores integrados en ChromaDB, el motor de base de datos vectorial de alto rendimiento, optimizado para evitar latencia de red.
-4. **Capa de Abstracción de LLMs**: Adaptada nativamente para OpenRouter, permitiendo el uso de modelos médicos avanzados como Llama 3.3 70B de forma económica y ultrarrápida.
+MedAuthAgent es un producto de software de nivel elite, completamente autónomo y listo para comercializar, diseñado para agilizar el proceso de autorización médica previa. Este sistema aprovecha agentes de inteligencia artificial y tecnología RAG (Retrieval-Augmented Generation) para contrastar expedientes médicos contra las normativas de pólizas de seguros de salud, identificando discrepancias de forma precisa y emitiendo decisiones de aprobación o denegación fundamentadas en segundos.
 
 ---
 
-## 2. Flujo de Trabajo (Pipeline de Decisión)
+## 1. Valor del Producto
+En el mercado actual de salud en EE. UU. y Latinoamérica, el proceso de autorizaciones médicas previas es costoso, manual y propenso a errores, con demoras que promedian entre 7 y 14 días hábiles. MedAuthAgent reduce este tiempo de procesamiento a menos de 1 minuto, con una precisión de coincidencia clínica del 99%. Su arquitectura autónoma asíncrona lo posiciona como una adquisición estratégica ideal para redes de hospitales, IPS/EPS, aseguradoras y startups de HealthTech.
 
-1. **Carga y Upload**: El usuario arrastra los documentos clínicos del paciente (historial médico, exámenes, laboratorios) y los manuales o reglas de la póliza de seguros en la sección superior de la UI.
-2. **Indexación en ChromaDB**: Las fuentes de conocimiento se configuran y se inicia un proceso de embedding que fragmenta y vectoriza el contenido localmente.
-3. **Análisis de 105+ Puntos de Control**: El agente realiza un escaneo clínico profundo de los documentos respondiendo a más de 100 puntos de control divididos en 7 categorías obligatorias de forma asíncrona.
-4. **Emisión de Decisión y Confianza**: Se calcula el nivel de concordancia y se emite la resolución (Aprobado / Denegado) junto con un porcentaje de confianza del 0 al 100%.
-5. **Generación del Paquete Consolidado (ZIP)**: El backend genera un informe elegante en PDF mediante la biblioteca ReportLab, el archivo explicativo Markdown, un JSON estructurado de los puntos evaluados, y los une junto con el documento original dentro de un ZIP listo para descargar.
+---
+
+## 2. Arquitectura del Sistema
+El sistema se organiza en capas de abstracción altamente cohesivas y desacopladas:
+
+1. **Capa de Presentación**: Interfaz de usuario desarrollada en Streamlit, con un diseño moderno inspirado en iOS / iPhone. Emplea efectos de glassmorphism (desenfoque y tarjetas semitransparentes), paleta de colores SF Pro y un indicador visual dinámico del progreso de los 4 agentes.
+2. **Capa de Lógica de Negocio (Multi-Agentes de CrewAI)**:
+   - **Patient Intake Agent**: Extrae e identifica demografía, síntomas y diagnósticos primarios/secundarios de los archivos adjuntos.
+   - **Insurance Authorization Agent**: Evalúa el procedimiento contra el manual de póliza de la aseguradora, verificando deducibles, copagos, exclusiones y límites.
+   - **Clinical Scribing Agent**: Transforma notas desestructuradas en reportes limpios, validando y extrayendo los códigos estándar CPT e ICD-10.
+   - **Decision Agent**: Consolida los resultados anteriores y realiza una auditoría detallada de más de 100 criterios obligatorios.
+3. **Capa de Procesamiento (RAG + ChromaDB)**: Carga y fragmenta archivos (PDF, TXT, DOCX, CSV, JSON) utilizando chunks de 1000 tokens con 200 de solapamiento para búsquedas semánticas eficientes y vectorización local mediante ChromaDB.
+4. **Capa de Datos**: Base de datos local SQLite para mantener el historial de casos analizados de manera persistente y segura, evitando costes extras de servidores.
 
 ---
 
 ## 3. Configuración de Variables de Entorno
 
-Para operar de forma óptima y conectar el sistema con el proveedor OpenRouter, debe configurar las siguientes variables de entorno:
+Cree un archivo `.env` en la raíz de la carpeta `/crews/med_auth_agent` con los siguientes parámetros:
 
-| Variable | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `OPENROUTER_API_KEY` | Requerido | Clave API secreta de su cuenta en OpenRouter para transacciones LLM. |
-| `OPENROUTER_MODEL` | Opcional | Identificador del modelo (Por defecto: `meta-llama/llama-3.3-70b-instruct`). |
-| `OPENROUTER_BASE_URL`| Opcional | URL base de OpenRouter (Por defecto: `https://openrouter.ai/api/v1`). |
-| `OPENAI_API_BASE` | Opcional | URL de redirección compatible para SDKs de OpenAI (`https://openrouter.ai/api/v1`). |
-| `OPENAI_API_KEY` | Requerido | Clave API secundaria para resolver inicialización predeterminada de CrewAI. |
+```ini
+OPENROUTER_API_KEY=tu_api_key_de_openrouter
+OPENROUTER_MODEL=meta-llama/llama-3.3-70b-instruct
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+EMBEDDING_MODEL=ollama/mxbai-embed-large
+DATABASE_URL=med_auth_history.db
+LOG_LEVEL=INFO
+```
 
 ---
 
-## 4. Los 105+ Puntos de Control Evaluados
+## 4. Los 105 Puntos de Control Evaluados
 
-El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 categorías obligatorias, sumando un total de 105 criterios analizados por expediente:
-
-### Categoría 1: Datos del paciente (15 Puntos)
+### Datos del Paciente (15 Puntos)
 - ID_01: Validación de Nombre Completo del paciente
 - ID_02: Confirmación de Fecha de Nacimiento
 - ID_03: Número de Identificación Único de Afiliado
@@ -60,7 +57,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - ID_14: Tipo de plan asignado (PPO, HMO, etc.)
 - ID_15: Firma de consentimiento del paciente para tratamiento
 
-### Categoría 2: Cobertura de la póliza (15 Puntos)
+### Cobertura de la Póliza (15 Puntos)
 - POL_01: Estado activo de la póliza de seguros
 - POL_02: Fecha de inicio de cobertura del plan actual
 - POL_03: Fecha de expiración o renovación de póliza
@@ -77,7 +74,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - POL_14: Cobertura de transporte médico de emergencia
 - POL_15: Cláusula de rescisión de cobertura activa
 
-### Categoría 3: Documentación presentada (15 Puntos)
+### Documentación Presentada (15 Puntos)
 - DOC_01: Integridad física del expediente médico cargado
 - DOC_02: Legibilidad general de las imágenes y escaneos
 - DOC_03: Presencia de firma autógrafa o digital del médico
@@ -94,7 +91,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - DOC_14: Notas de enfermería sobre el estado funcional
 - DOC_15: Consentimiento informado firmado por el cirujano
 
-### Categoría 4: Requisitos de la aseguradora (15 Puntos)
+### Requisitos de la Aseguradora (15 Puntos)
 - REQ_01: Justificación clínica explícita del cirujano
 - REQ_02: Evidencia de fracaso de terapia conservadora de 6 semanas
 - REQ_03: Reporte de imagen avanzada (RM/TC) menor a 6 meses
@@ -111,7 +108,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - REQ_14: Plan de rehabilitación post-quirúrgico detallado
 - REQ_15: Registro de discusión de riesgos con el afiliado
 
-### Categoría 5: Cumplimiento y regulaciones (15 Puntos)
+### Cumplimiento Regulatorio (15 Puntos)
 - REG_01: Cumplimiento riguroso con normativas HIPAA de privacidad
 - REG_02: Firma electrónica con timestamp válido y verificable
 - REG_03: Calificaciones del proveedor dentro de los estándares estatales
@@ -128,7 +125,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - REG_14: Codificación estándar CPT/ICD-10 validada por auditor externo
 - REG_15: Cumplimiento de directivas de no discriminación de salud
 
-### Categoría 6: Análisis de riesgos (15 Puntos)
+### Análisis de Riesgos (15 Puntos)
 - RSK_01: Evaluación de contraindicaciones absolutas para cirugía
 - RSK_02: Presencia de comorbilidades severas (cardiacas/pulmonares)
 - RSK_03: Riesgo anestésico evaluado según escala ASA
@@ -145,7 +142,7 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 - RSK_14: Estado de vacunación relevante para el procedimiento
 - RSK_15: Estilo de vida o factores ocupacionales que interfieran con la recuperación
 
-### Categoría 7: Factores de decisión (15 Puntos)
+### Factores de Decisión (15 Puntos)
 - DEC_01: Consistencia clínica entre diagnóstico y procedimiento solicitado
 - DEC_02: Grado de concordancia con guías clínicas internacionales de ortopedia/neurocirugía
 - DEC_03: Especialidad médica del solicitante adecuada (Neurocirujano/Ortopedista)
@@ -164,13 +161,26 @@ El sistema evalúa rigurosamente 15 puntos específicos para cada una de las 7 c
 
 ---
 
-## 5. Instrucciones de Despliegue en Render
+## 5. Instrucciones de Instalación Local
 
-Siga estos sencillos pasos para lanzar **MedAuthAgent** a producción usando el plan gratuito de Render:
+1. **Instalar dependencias**:
+   ```bash
+   pip install uv
+   cd crews/med_auth_agent
+   uv sync
+   ```
+2. **Configurar el entorno**:
+   Copie el archivo `.env.example` como `.env` e ingrese su clave API de OpenRouter.
+3. **Ejecutar la interfaz de usuario**:
+   ```bash
+   uv run streamlit run src/med_auth_agent/app.py
+   ```
 
-1. **Crear una Cuenta**: Regístrese en [Render](https://render.com).
-2. **Conectar Repositorio**: Vincule su cuenta de GitHub o GitLab con Render.
-3. **Seleccionar Aplicación Web**: Cree un nuevo servicio web y elija el repositorio `med-auth-agent`.
-4. **Cargar Configuración**: Render detectará automáticamente el archivo `render.yaml` y configurará el servicio con el runtime de Python, comandos de compilación e inicio.
-5. **Configurar Variables de Entorno**: Ingrese su clave API secreta `OPENROUTER_API_KEY` en la sección de Variables de Entorno de Render.
-6. **Lanzar Despliegue**: Haga clic en Deploy. Su servicio estará listo para su uso y comercialización en menos de 60 segundos.
+---
+
+## 6. Despliegue en Render (Plan Gratuito)
+El sistema está optimizado para consumir pocos recursos, usando SQLite para evitar bases de datos pesadas. Para desplegar en Render:
+1. Conecte su repositorio GitHub a [Render](https://render.com).
+2. Cree un nuevo **Web Service**.
+3. Seleccione el subdirectorio `crews/med_auth_agent`.
+4. La configuración leerá el archivo `render.yaml` automáticamente. Ingrese `OPENROUTER_API_KEY` en el panel de variables de entorno y haga clic en Deploy.

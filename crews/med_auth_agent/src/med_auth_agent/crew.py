@@ -29,18 +29,60 @@ class MedAuthAgent():
                     self.knowledge_sources.append(DOCXKnowledgeSource(file_paths=[file_path]))
 
     @agent
-    def med_auth_officer(self) -> Agent:
+    def patient_intake_agent(self) -> Agent:
         return Agent(
-            config=self.agents_config['med_auth_officer'],
+            config=self.agents_config['patient_intake_agent'],
+            verbose=True,
+            llm=get_llm()
+        )
+
+    @agent
+    def insurance_authorization_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['insurance_authorization_agent'],
+            verbose=True,
+            llm=get_llm()
+        )
+
+    @agent
+    def clinical_scribing_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['clinical_scribing_agent'],
+            verbose=True,
+            llm=get_llm()
+        )
+
+    @agent
+    def decision_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['decision_agent'],
             verbose=True,
             llm=get_llm(),
             tools=[PDFSearchTool()]
         )
 
     @task
-    def analyze_medical_request_task(self) -> Task:
+    def patient_intake_task(self) -> Task:
         return Task(
-            config=self.tasks_config['analyze_medical_request_task'],
+            config=self.tasks_config['patient_intake_task']
+        )
+
+    @task
+    def insurance_authorization_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['insurance_authorization_task']
+        )
+
+    @task
+    def clinical_scribing_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['clinical_scribing_task']
+        )
+
+    @task
+    def decision_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['decision_task'],
             output_json=DecisionReport
         )
 
