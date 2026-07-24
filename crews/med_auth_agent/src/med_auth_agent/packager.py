@@ -94,7 +94,14 @@ def generate_decision_pdf(report_data: dict, output_pdf_path: str):
 
     elements.append(Paragraph("Evaluación Detallada de Criterios (Primeros Puntos)", section_style))
 
-    table_rows = [[Paragraph("Nombre Criterio", header_style), Paragraph("Valor Evaluado", header_style), Paragraph("Estado", header_style), Paragraph("Explicación", header_style)]]
+    table_rows = [[
+        Paragraph("Nombre Criterio", header_style),
+        Paragraph("Valor Evaluado", header_style),
+        Paragraph("Estado", header_style),
+        Paragraph("Explicación", header_style),
+        Paragraph("Documento", header_style),
+        Paragraph("Evidencia Citada", header_style)
+    ]]
 
     evaluated_points = report_data.get('evaluated_points', [])
     for pt in evaluated_points[:25]:
@@ -102,11 +109,13 @@ def generate_decision_pdf(report_data: dict, output_pdf_path: str):
             Paragraph(pt.get('name', 'N/A'), cell_style),
             Paragraph(pt.get('value', 'N/A'), cell_style),
             Paragraph(pt.get('status', 'N/A'), cell_style),
-            Paragraph(pt.get('explanation', 'N/A'), cell_style)
+            Paragraph(pt.get('explanation', 'N/A'), cell_style),
+            Paragraph(pt.get('source_document', 'No encontrado'), cell_style),
+            Paragraph(pt.get('source_excerpt', 'No encontrado'), cell_style)
         ]
         table_rows.append(row)
 
-    pts_table = Table(table_rows, colWidths=[130, 100, 60, 240])
+    pts_table = Table(table_rows, colWidths=[90, 70, 40, 150, 60, 120])
     pts_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E3A8A')),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
@@ -155,14 +164,73 @@ Para obtener el desglose completo de los 100+ puntos analizados, consulte el arc
 def generate_complete_report_csv(evaluated_points: list, output_csv_path: str):
     with open(output_csv_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(["Nombre de Criterio", "Valor Hallado", "Estado de Cumplimiento", "Explicación del Analista"])
+        writer.writerow(["Nombre de Criterio", "Valor Hallado", "Estado de Cumplimiento", "Explicación del Analista", "Documento Origen", "Fragmento Evidencia"])
         for pt in evaluated_points:
             writer.writerow([
                 pt.get("name", "N/A"),
                 pt.get("value", "N/A"),
                 pt.get("status", "N/A"),
-                pt.get("explanation", "N/A")
+                pt.get("explanation", "N/A"),
+                pt.get("source_document", "No encontrado"),
+                pt.get("source_excerpt", "No encontrado")
             ])
+
+def generate_appeal_pdf(appeal_data: dict, output_pdf_path: str):
+    doc = SimpleDocTemplate(
+        output_pdf_path,
+        pagesize=letter,
+        rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'AppealTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=20,
+        textColor=colors.HexColor('#991B1B'),
+        spaceAfter=15
+    )
+
+    section_style = ParagraphStyle(
+        'AppealSection',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        textColor=colors.HexColor('#1E3A8A'),
+        spaceBefore=12,
+        spaceAfter=6
+    )
+
+    body_style = ParagraphStyle(
+        'AppealBodyText',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=10,
+        leading=14,
+        spaceAfter=8
+    )
+
+    elements = []
+
+    elements.append(Paragraph("CARTA DE APELACIÓN DE AUTORIZACIÓN MÉDICA", title_style))
+    elements.append(Paragraph(f"<b>Asunto:</b> {appeal_data.get('subject', 'RE: Apelación de Autorización Previa')}", section_style))
+    elements.append(Spacer(1, 15))
+
+    body_text = appeal_data.get('body', '')
+    for pr in body_text.split('\n'):
+        if pr.strip():
+            elements.append(Paragraph(pr.strip(), body_style))
+
+    cited = appeal_data.get('cited_points', [])
+    if cited:
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("Criterios de Póliza Apelados:", section_style))
+        for pt in cited:
+            elements.append(Paragraph(f"• {pt}", body_style))
+
+    doc.build(elements)
 
 def generate_hipaa_audit_log(report_data: dict, output_json_path: str):
     import datetime
@@ -209,6 +277,11 @@ def create_downloadable_zip(original_file_path: str, report_data: dict, output_z
     audit_path = os.path.join(temp_dir, "LOG_AUDITORIA.json")
     generate_hipaa_audit_log(report_data, audit_path)
 
+    appeal_pdf_path = None
+    if "appeal_letter" in report_data and report_data["appeal_letter"]:
+        appeal_pdf_path = os.path.join(temp_dir, "Carta_Apelacion.pdf")
+        generate_appeal_pdf(report_data["appeal_letter"], appeal_pdf_path)
+
     with zipfile.ZipFile(output_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         if original_file_path and os.path.exists(original_file_path):
             zipf.write(original_file_path, os.path.basename(original_file_path))
@@ -216,3 +289,5 @@ def create_downloadable_zip(original_file_path: str, report_data: dict, output_z
         zipf.write(md_path, "EXPLICACION_DETALLADA.md")
         zipf.write(csv_path, "REPORTE_COMPLETO.csv")
         zipf.write(audit_path, "LOG_AUDITORIA.json")
+        if appeal_pdf_path and os.path.exists(appeal_pdf_path):
+            zipf.write(appeal_pdf_path, "Carta_Apelacion.pdf")

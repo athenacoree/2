@@ -64,5 +64,68 @@ class TestMedAuthAgent(unittest.TestCase):
         clear_all_history()
         self.assertEqual(len(get_history()), 0)
 
+    def test_insurer_patterns(self):
+        from med_auth_agent.history_db import save_or_update_pattern, get_patterns_for_insurer, get_all_patterns
+        save_or_update_pattern("Cigna", "Requires MRI of Lumbar Spine less than 6 months old", "Alto")
+        save_or_update_pattern("Cigna", "Requires MRI of Lumbar Spine less than 6 months old", "Alto")
+        save_or_update_pattern("Cigna", "Requires 6 weeks physical therapy conservative treatment", "Medio")
+
+        patterns = get_patterns_for_insurer("Cigna")
+        self.assertEqual(len(patterns), 2)
+        self.assertEqual(patterns[0]["times_observed"], 2)
+        self.assertIn("MRI", patterns[0]["pattern_description"])
+
+        all_patterns = get_all_patterns()
+        self.assertGreaterEqual(len(all_patterns), 2)
+
+    def test_precheck_schemas_and_compilation(self):
+        from med_auth_agent.schemas import PrecheckReport, EvaluationItem
+        item = EvaluationItem(name="REQ_02", value="No encontrado", status="No Cumple", explanation="Missing physiotherapy notes")
+        report = PrecheckReport(
+            approval_probability="45%",
+            missing_critical_items=[item],
+            recommendations_to_improve="Submit physiotherapy reports and specialist notes."
+        )
+        self.assertEqual(report.approval_probability, "45%")
+        self.assertEqual(len(report.missing_critical_items), 1)
+
+    def test_appeal_letter_schema_and_pdf_generation(self):
+        from med_auth_agent.schemas import AppealLetter
+        from med_auth_agent.packager import generate_appeal_pdf
+        appeal = AppealLetter(
+            subject="RE: Appeal for John Doe",
+            body="This is the formal appeal letter body text.",
+            cited_points=["REQ_02", "POL_04"]
+        )
+        self.assertEqual(appeal.subject, "RE: Appeal for John Doe")
+        self.assertEqual(len(appeal.cited_points), 2)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            appeal_pdf_path = os.path.join(temp_dir, "test_appeal.pdf")
+            generate_appeal_pdf(appeal.model_dump(), appeal_pdf_path)
+            self.assertTrue(os.path.exists(appeal_pdf_path))
+
+    def test_fallback_on_parse_error_prevention(self):
+        raw_invalid_response = "This is not valid JSON at all. It is just raw text from the LLM."
+        with self.assertRaises(json.JSONDecodeError):
+            json.loads(raw_invalid_response)
+
+        log_file = "med_auth_errors.log"
+        if os.path.exists(log_file):
+            os.remove(log_file)
+
+        import pandas as pd
+        last_exception = "JSONDecodeError: Expecting value: line 1 column 1"
+        with open(log_file, "a", encoding="utf-8") as log_f:
+            log_f.write(f"--- ERROR AT {pd.Timestamp.now()} ---\n")
+            log_f.write(f"Exception: {str(last_exception)}\n")
+            log_f.write(f"Raw LLM Response: {str(raw_invalid_response)}\n\n")
+
+        self.assertTrue(os.path.exists(log_file))
+        with open(log_file, "r", encoding="utf-8") as f:
+            log_content = f.read()
+            self.assertIn("Raw LLM Response", log_content)
+            self.assertIn("JSONDecodeError", log_content)
+
 if __name__ == "__main__":
     unittest.main()

@@ -21,8 +21,82 @@ def init_db():
             raw_report_json TEXT
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS insurer_patterns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            insurer_name TEXT,
+            pattern_description TEXT,
+            times_observed INTEGER DEFAULT 1,
+            last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+            confidence_level TEXT DEFAULT 'Alto'
+        )
+    """)
     conn.commit()
     conn.close()
+
+def save_or_update_pattern(insurer_name: str, pattern_description: str, confidence_level: str = "Alto"):
+    if not insurer_name or not pattern_description:
+        return
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, times_observed FROM insurer_patterns WHERE LOWER(insurer_name) = ? AND LOWER(pattern_description) = ?",
+        (insurer_name.lower().strip(), pattern_description.lower().strip())
+    )
+    row = cursor.fetchone()
+    if row:
+        pattern_id, times = row
+        cursor.execute(
+            "UPDATE insurer_patterns SET times_observed = ?, last_seen = CURRENT_TIMESTAMP WHERE id = ?",
+            (times + 1, pattern_id)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO insurer_patterns (insurer_name, pattern_description, times_observed, confidence_level) VALUES (?, ?, 1, ?)",
+            (insurer_name.strip(), pattern_description.strip(), confidence_level)
+        )
+    conn.commit()
+    conn.close()
+
+def get_patterns_for_insurer(insurer_name: str):
+    if not insurer_name:
+        return []
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT pattern_description, times_observed, last_seen, confidence_level FROM insurer_patterns WHERE LOWER(insurer_name) = ? ORDER BY times_observed DESC",
+        (insurer_name.lower().strip(),)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        results.append({
+            "pattern_description": r[0],
+            "times_observed": r[1],
+            "last_seen": r[2],
+            "confidence_level": r[3]
+        })
+    return results
+
+def get_all_patterns():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT insurer_name, pattern_description, times_observed, last_seen, confidence_level FROM insurer_patterns ORDER BY times_observed DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for r in rows:
+        results.append({
+            "insurer_name": r[0],
+            "pattern_description": r[1],
+            "times_observed": r[2],
+            "last_seen": r[3],
+            "confidence_level": r[4]
+        })
+    return results
 
 def save_request(report_data: dict):
     conn = sqlite3.connect(DB_PATH)
@@ -84,5 +158,6 @@ def clear_all_history():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM authorization_requests")
+    cursor.execute("DELETE FROM insurer_patterns")
     conn.commit()
     conn.close()
