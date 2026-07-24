@@ -49,8 +49,38 @@ decision_task:
     - value: parsed evidence or value (or 'No encontrado')
     - status: 'Cumple' or 'No Cumple'
     - explanation: concise reason for the status
+    - source_excerpt: exact textual excerpt/fragment (max 300 characters) from the original loaded documents that supports the value and status. If no real evidence is found in the documents, this must be set exactly to 'No encontrado' (NEVER invent or hallucinate excerpts).
+    - source_document: the filename from which this excerpt was extracted (or 'No encontrado' if there is no real evidence in the loaded documents).
+
+    CRITICAL INSTRUCTION: If you do not find real, verifiable text/evidence in the loaded documents, the status must be 'No Cumple', and source_excerpt must be 'No encontrado'. Hallucinating or inventing evidence or excerpts is strictly prohibited.
 
     Generate a final decision ('Aprobado' or 'Denegado'), calculate a confidence score (0-100%), and produce a detailed explanation summary of the decision, key evidence supporting it, and user-actionable recommendations.
+    {feedback}
   expected_output: >
     A fully structured JSON matching the DecisionReport schema with at least 105 total evaluated points across the 7 categories, final decision, confidence percentage, summary, evidence, and recommendations.
+  agent: decision_agent
+
+appeal_writing_task:
+  description: >
+    Based on the clinical decision report where the prior authorization request was 'Denegado', write a formal and persuasive medical appeal letter.
+    You must:
+    - Reference explicitly each of the points with status 'No Cumple' from the decision report.
+    - Cite the relevant insurer policy rules, clinical guidelines, or standard medical guidelines for each failed point.
+    - Suggest exactly what additional clinical documentation or correction the clinician, provider, or patient should submit to address the deficiency.
+    - Draft the complete text of the appeal letter in a highly professional format including header, formal greeting, body paragraphs, and professional closing with a signature block.
+    Ensure the letter is written entirely in Spanish and is highly persuasive, clear, and professional.
+  expected_output: >
+    A fully structured JSON matching the AppealLetter schema, containing the subject, body of the appeal letter in Spanish, and a list of cited points.
+  agent: appeal_writer_agent
+
+precheck_task:
+  description: >
+    Conduct a simulation or pre-check on the provided patient clinical case.
+    Unlike a complete decision run, you do not need to evaluate all 105 points fully, but you must look at key requirements and:
+    - Determine which critical points from the patient data, policy rules, and insurer requirements are covered vs missing ('No encontrado').
+    - Calculate an overall approval probability percentage (0-100%) based on critical coverage.
+    - List the missing critical items (status 'No encontrado'), sorted by their negative impact on the final approval probability (highest impact items first).
+    - Provide clear, actionable recommendations on what documents, clinical notes, or clinical criteria must be uploaded/satisfied to increase this probability.
+  expected_output: >
+    A structured JSON matching the PrecheckReport schema detailing the calculated approval probability, list of missing critical items, and recommendations to improve.
   agent: decision_agent
