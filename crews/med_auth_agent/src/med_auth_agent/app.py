@@ -5,10 +5,14 @@ import streamlit as st
 import json
 import pandas as pd
 import asyncio
+import logging
+import traceback
 from med_auth_agent.crew import MedAuthAgent
 from med_auth_agent.packager import create_downloadable_zip
 from med_auth_agent.history_db import init_db, save_request, get_history, clear_all_history
+from med_auth_agent.analysis_runner import run_analysis_with_retry
 
+logging.basicConfig(level=logging.ERROR)
 init_db()
 
 st.set_page_config(
@@ -140,6 +144,55 @@ st.markdown("""
         font-size: 16px;
         box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2);
     }
+
+    /* Text contrast & accessibility improvements for dark theme (glassmorphism) */
+    html, body, [data-testid="stAppViewContainer"], p, li, span, h1, h2, h3, h4, h5, h6, .glass-card, .glass-card h3, .glass-card h4 {
+        color: #F5F5F7 !important;
+    }
+
+    /* Secondary/Helper text & descriptions */
+    small, .step-text, .secondary-text, p[data-testid="stMarkdownContainer"] em, [data-testid="stForm"] p, div[data-testid="stMarkdownContainer"] p, .glass-card small, .glass-card .secondary-text {
+        color: #C7C7CC !important;
+    }
+
+    /* Widget labels (e.g., "Nombre de la Aseguradora") */
+    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+
+    /* File Uploader area & placeholders */
+    [data-testid="stFileUploader"] section {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] {
+        color: #FFFFFF !important;
+    }
+    [data-testid="stFileUploader"] p, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] div {
+        color: #C7C7CC !important;
+    }
+
+    /* Dataframe / Table elements in all views */
+    table, th, td, [data-testid="stTable"] td, [data-testid="stTable"] th, .dataframe td, .dataframe th {
+        color: #FFFFFF !important;
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    th {
+        font-weight: bold !important;
+        background-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* Expander elements in History */
+    [data-testid="stExpander"] {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    [data-testid="stExpander"] summary p {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -230,36 +283,9 @@ if menu == "Nuevo Análisis":
                 try:
                     agent_system = MedAuthAgent(knowledge_files=saved_paths, insurer_name=insurer_name_input)
 
-                    max_attempts = 3
-                    feedback = ""
-                    results_json = None
-                    last_exception = None
-                    raw_response = None
-
-                    for attempt in range(max_attempts):
-                        if attempt > 0:
-                            status_container.warning(f"Reintentando análisis (Intento {attempt + 1}/{max_attempts}) debido a error de formato JSON...")
-
-                        try:
-                            crew_run = agent_system.crew(feedback=feedback).kickoff()
-                            raw_response = crew_run.raw
-                            results_json = json.loads(raw_response)
-                            break
-                        except Exception as inner_e:
-                            last_exception = inner_e
-                            feedback = (
-                                f"\n\nCRITICAL ERROR from previous attempt: The previous response could not be parsed as valid JSON. "
-                                f"Error: {str(inner_e)}. "
-                                f"You MUST return ONLY a strictly valid JSON object matching the schema. No markdown formatting outside the JSON, "
-                                f"no extra explanations before or after the JSON."
-                            )
+                    results_json = run_analysis_with_retry(agent_system, max_attempts=3, status_container=status_container)
 
                     if results_json is None:
-                        with open("med_auth_errors.log", "a", encoding="utf-8") as log_f:
-                            log_f.write(f"--- ERROR AT {pd.Timestamp.now()} ---\n")
-                            log_f.write(f"Exception: {str(last_exception)}\n")
-                            log_f.write(f"Raw LLM Response: {str(raw_response)}\n\n")
-
                         status_container.empty()
                         stepper_container.empty()
                         st.error("No se pudo completar el análisis. Por favor intenta de nuevo o revisa los documentos cargados.")
@@ -279,6 +305,7 @@ if menu == "Nuevo Análisis":
                                 appeal_letter_obj = agent_system.run_appeal_crew(results_json)
                                 results_json["appeal_letter"] = appeal_letter_obj.model_dump()
                             except Exception as appeal_e:
+                                logging.exception("Error en generación de carta de apelación")
                                 failed_pts = [p for p in results_json.get("evaluated_points", []) if p.get("status") == "No Cumple"]
                                 failed_pts_desc = "\n".join([f"- {pt.get('name')}: {pt.get('explanation')}" for pt in failed_pts])
                                 results_json["appeal_letter"] = {
@@ -390,6 +417,7 @@ if menu == "Nuevo Análisis":
                         st.markdown('</div>', unsafe_allow_html=True)
 
                 except Exception as e:
+                    logging.exception("Error en pipeline asíncrono de prior auth")
                     status_container.empty()
                     stepper_container.empty()
                     st.error(f"Error procesando la solicitud asíncrona de prior auth: {e}")
@@ -485,6 +513,7 @@ elif menu == "Simulador Pre-Envío":
                     st.markdown('</div>', unsafe_allow_html=True)
 
                 except Exception as e:
+                    logging.exception("Error en simulador pre-envío")
                     status_container.empty()
                     stepper_container.empty()
                     st.error(f"Error procesando la simulación pre-envío: {e}")

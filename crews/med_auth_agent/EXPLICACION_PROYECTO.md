@@ -184,3 +184,27 @@ El sistema está optimizado para consumir pocos recursos, usando SQLite para evi
 2. Cree un nuevo **Web Service**.
 3. Seleccione el subdirectorio `crews/med_auth_agent`.
 4. La configuración leerá el archivo `render.yaml` automáticamente. Ingrese `OPENROUTER_API_KEY` en el panel de variables de entorno y haga clic en Deploy.
+
+---
+
+## 7. Actualizaciones de Arquitectura y Corrección de Errores (v3.1)
+
+En la versión v3.1, se implementaron mejoras clave de estabilidad, modularidad y legibilidad para asegurar un flujo de ejecución óptimo en producción y pruebas automatizadas de cobertura completa:
+
+### 1. Corrección Crítica de Super() en el Constructor de CrewBase
+En `crew.py`, se removió la llamada implícita `super().__init__()` dentro de la clase `MedAuthAgent` decorada con `@CrewBase`. Dado que el decorador de CrewAI envuelve y reconstruye la clase de forma dinámica para mapear dinámicamente sus agentes, tareas y configuraciones en tiempo de ejecución, el uso de `super()` corto generaba un `TypeError: super(type, obj): obj must be an instance or subtype of type` al intentar instanciar la clase en el hilo de análisis asíncrono. Esta remoción previene fallas catastróficas al iniciar el pipeline.
+
+### 2. Desacoplamiento del Flujo de Reintento y Fallback (`analysis_runner.py`)
+Para mejorar el principio de responsabilidad única (SRP), se extrajo la lógica de reintentos y corrección de respuestas JSON del archivo de vista (`app.py`) a un módulo independiente y reutilizable: `src/med_auth_agent/analysis_runner.py`.
+- **`run_analysis_with_retry`**: Maneja de manera agnóstica de la interfaz el flujo de reintentos con prompts de retroalimentación correctiva (feedback loops), interactuando con Streamlit de manera opcional mediante callbacks o contenedores de estado si están presentes.
+- **Robustez en Pruebas**: Al estar desacoplado del frontend, este flujo se prueba end-to-end en el test automatizado `test_fallback_on_parse_error_prevention` (dentro de `test_suite.py`) simulando y mockeando respuestas de LLM corruptas/inválidas para confirmar el número exacto de intentos (3), la ausencia de persistencia corrupta en base de datos al fallar, y el registro apropiado del error en `med_auth_errors.log`.
+
+### 3. Registro Centralizado de Excepciones y Trazabilidad
+Se incorporó el uso formal del módulo estándar `logging` de Python y su función `logging.exception` en todos los bloques `except Exception as e:` del frontend (`app.py`), incluyendo el pipeline de análisis asíncrono principal, el flujo de redacción de apelaciones, y el simulador de pre-envío. Esto garantiza que ante cualquier fallo imprevisto, los logs del servicio (como los de Render) capturen la traza completa (traceback), simplificando la depuración proactiva de errores en producción.
+
+### 4. Accesibilidad y Contraste de Interfaz de Usuario (Tema Oscuro)
+Se optimizó el contraste del tema visual (glassmorphism oscuro) de la aplicación para cumplir con el estándar AA de accesibilidad (relación de contraste mínima de 4.5:1):
+- **Texto Principal**: Definido en blanco puro (`#FFFFFF`) o gris claro de máxima luminosidad (`#F5F5F7`) para el cuerpo del documento, descripciones principales y tarjetas de vidrio (`.glass-card`).
+- **Textos Secundarios y Placeholders**: Ajustados con un gris suave altamente visible (`#C7C7CC` o superior), evitando el uso de tonos excesivamente oscuros que se difuminaban contra el fondo degradado.
+- **Formularios e Ingesta**: Etiquetas de formularios (`label`) y descripciones del cargador de archivos (drag-and-drop placeholders) configurados con contraste aumentado para máxima legibilidad en dispositivos móviles o pantallas con bajo brillo.
+- **Tablas de Datos**: El texto de las celdas y cabeceras dentro de los dataframes y tablas de SQLite/patrones se redefinieron explícitamente a blanco sobre los fondos sombreados de las filas.

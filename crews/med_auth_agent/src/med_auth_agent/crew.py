@@ -14,7 +14,6 @@ class MedAuthAgent():
     tasks_config = 'config/tasks.yaml'
 
     def __init__(self, knowledge_files: list = None, insurer_name: str = ""):
-        super().__init__()
         self.insurer_name = insurer_name
         self.knowledge_sources = []
         if knowledge_files:
