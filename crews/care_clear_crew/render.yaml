@@ -1,0 +1,27 @@
+databases:
+  - name: care-clear-db
+    databaseName: care_clear_db
+    user: care_clear_user
+    plan: free
+
+services:
+  - type: web
+    name: care-clear-crew
+    env: python
+    buildCommand: "pip install uv && uv pip install -e . && uv pip install psycopg2-binary bcrypt"
+    startCommand: "uv run streamlit run src/care_clear_crew/app.py --server.port $PORT --server.address 0.0.0.0"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: care-clear-db
+          property: connectionString
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "meta-llama/llama-3.3-70b-instruct"
+      - key: OPENROUTER_BASE_URL
+        value: "https://openrouter.ai/api/v1"
+      - key: OPENAI_API_BASE
+        value: "https://openrouter.ai/api/v1"
+      - key: OPENAI_API_KEY
+        sync: false
