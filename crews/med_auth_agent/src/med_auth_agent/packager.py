@@ -7,7 +7,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-def generate_decision_pdf(report_data: dict, output_pdf_path: str):
+def generate_decision_pdf(report_data: dict, output_pdf_path: str, creator_name: str = "N/A"):
     doc = SimpleDocTemplate(
         output_pdf_path,
         pagesize=letter,
@@ -70,9 +70,10 @@ def generate_decision_pdf(report_data: dict, output_pdf_path: str):
         [Paragraph("<b>Paciente:</b>", body_style), Paragraph(report_data.get('patient_name', 'N/A'), body_style)],
         [Paragraph("<b>Póliza:</b>", body_style), Paragraph(report_data.get('policy_number', 'N/A'), body_style)],
         [Paragraph("<b>Decisión Final:</b>", body_style), Paragraph(f"<b>{report_data.get('decision', 'N/A')}</b>", body_style)],
-        [Paragraph("<b>Confianza:</b>", body_style), Paragraph(f"{report_data.get('confidence', 'N/A')}", body_style)]
+        [Paragraph("<b>Confianza:</b>", body_style), Paragraph(f"{report_data.get('confidence', 'N/A')}", body_style)],
+        [Paragraph("<b>Médico/Usuario Responsable:</b>", body_style), Paragraph(creator_name, body_style)]
     ]
-    summary_table = Table(summary_data, colWidths=[120, 400])
+    summary_table = Table(summary_data, colWidths=[150, 370])
     summary_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#E2E8F0')),
@@ -127,15 +128,16 @@ def generate_decision_pdf(report_data: dict, output_pdf_path: str):
 
     doc.build(elements)
 
-def generate_detailed_explanation_md(report_data: dict, output_md_path: str):
+def generate_detailed_explanation_md(report_data: dict, output_md_path: str, creator_name: str = "N/A"):
     decision_color = "🟢" if report_data.get("decision", "").upper() == "APROBADO" else "🔴"
     content = f"""# EXPLICACIÓN DETALLADA DE LA DECISIÓN DE AUTORIZACIÓN
 
 ## {decision_color} Decisión Final: {report_data.get('decision', 'N/A')} ({report_data.get('confidence', 'N/A')} de Confianza)
 
-### Información del Paciente
-- **Nombre:** {report_data.get('patient_name', 'N/A')}
+### Información del Paciente y Médico
+- **Nombre Paciente:** {report_data.get('patient_name', 'N/A')}
 - **Número de Póliza:** {report_data.get('policy_number', 'N/A')}
+- **Médico/Usuario Responsable:** {creator_name}
 
 ---
 
@@ -161,9 +163,11 @@ Para obtener el desglose completo de los 100+ puntos analizados, consulte el arc
     with open(output_md_path, 'w', encoding='utf-8') as f:
         f.write(content)
 
-def generate_complete_report_csv(evaluated_points: list, output_csv_path: str):
+def generate_complete_report_csv(evaluated_points: list, output_csv_path: str, creator_name: str = "N/A"):
     with open(output_csv_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
+        writer.writerow(["Médico/Usuario Responsable", creator_name])
+        writer.writerow([])
         writer.writerow(["Nombre de Criterio", "Valor Hallado", "Estado de Cumplimiento", "Explicación del Analista", "Documento Origen", "Fragmento Evidencia"])
         for pt in evaluated_points:
             writer.writerow([
@@ -232,18 +236,18 @@ def generate_appeal_pdf(appeal_data: dict, output_pdf_path: str):
 
     doc.build(elements)
 
-def generate_hipaa_audit_log(report_data: dict, output_json_path: str):
+def generate_hipaa_audit_log(report_data: dict, output_json_path: str, creator_name: str = "N/A", creator_institution: str = "N/A"):
     import datetime
     log_data = {
         "event_id": "MEDAUTH-AUDIT-LOG-" + datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
         "timestamp": datetime.datetime.now().isoformat(),
         "action": "PRIOR_AUTHORIZATION_PROCESS_RUN",
-        "actor": "MedAuthAgent Autonomous System",
+        "actor": f"Médico: {creator_name} ({creator_institution})",
         "hipaa_compliance_status": "SECURE_LOCAL_PROCESSING",
         "patient_identifier_encrypted": "SHA256_LOCAL_ONLY",
         "system_details": {
             "platform_name": "MedAuthAgent",
-            "database_engine": "SQLite3 (Local)",
+            "database_engine": "PostgreSQL / SQLite3",
             "rag_chunks_configuration": "1000 tokens overlap 200"
         },
         "audit_logs": [
@@ -262,20 +266,20 @@ def generate_hipaa_audit_log(report_data: dict, output_json_path: str):
     with open(output_json_path, 'w', encoding='utf-8') as f:
         json.dump(log_data, f, indent=4, ensure_ascii=False)
 
-def create_downloadable_zip(original_file_path: str, report_data: dict, output_zip_path: str, temp_dir: str):
+def create_downloadable_zip(original_file_path: str, report_data: dict, output_zip_path: str, temp_dir: str, creator_name: str = "N/A", creator_institution: str = "N/A"):
     os.makedirs(temp_dir, exist_ok=True)
 
     pdf_report_path = os.path.join(temp_dir, "informe_decision.pdf")
-    generate_decision_pdf(report_data, pdf_report_path)
+    generate_decision_pdf(report_data, pdf_report_path, creator_name)
 
     md_path = os.path.join(temp_dir, "EXPLICACION_DETALLADA.md")
-    generate_detailed_explanation_md(report_data, md_path)
+    generate_detailed_explanation_md(report_data, md_path, creator_name)
 
     csv_path = os.path.join(temp_dir, "REPORTE_COMPLETO.csv")
-    generate_complete_report_csv(report_data.get("evaluated_points", []), csv_path)
+    generate_complete_report_csv(report_data.get("evaluated_points", []), csv_path, creator_name)
 
     audit_path = os.path.join(temp_dir, "LOG_AUDITORIA.json")
-    generate_hipaa_audit_log(report_data, audit_path)
+    generate_hipaa_audit_log(report_data, audit_path, creator_name, creator_institution)
 
     appeal_pdf_path = None
     if "appeal_letter" in report_data and report_data["appeal_letter"]:
