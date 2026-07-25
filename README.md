@@ -49,7 +49,7 @@ Traditional CrewAI implementations showcasing multi-agent collaboration.
 #### Data & Research
 - [Industry Agents](crews/industry-agents) - Industry-specific agent implementations
 - [Match Profile to Positions](crews/match_profile_to_positions) - CV-to-job matching with vector search
-- [Meta Quest Knowledge](crews/meta_quest_knowledge) - PDF-based Q&A system
+- [Care Clear Crew](crews/care_clear_crew) - Prior Authorization AI Assistant system
 - [Markdown Validator](crews/markdown_validator) - Automated markdown validation and correction
 
 #### Travel & Planning
