@@ -208,3 +208,23 @@ Se optimizó el contraste del tema visual (glassmorphism oscuro) de la aplicaci�
 - **Textos Secundarios y Placeholders**: Ajustados con un gris suave altamente visible (`#C7C7CC` o superior), evitando el uso de tonos excesivamente oscuros que se difuminaban contra el fondo degradado.
 - **Formularios e Ingesta**: Etiquetas de formularios (`label`) y descripciones del cargador de archivos (drag-and-drop placeholders) configurados con contraste aumentado para máxima legibilidad en dispositivos móviles o pantallas con bajo brillo.
 - **Tablas de Datos**: El texto de las celdas y cabeceras dentro de los dataframes y tablas de SQLite/patrones se redefinieron explícitamente a blanco sobre los fondos sombreados de las filas.
+
+---
+
+## 8. Arquitectura Modular de Modelos de Datos de Pydantic (v4.0)
+
+En la versión v4.0, se refactorizó la estructura monolítica original de `schemas.py` en un conjunto de modelos modulares robustos utilizando **Pydantic v2**, organizados dentro del paquete `src/med_auth_agent/models/`.
+
+### 1. Organización del Paquete de Modelos
+Se crearon los siguientes módulos de modelos específicos, cada uno con una extensión estrictamente delimitada de entre 80 y 120 líneas de código para facilitar su mantenimiento y evitar archivos monstruosos:
+- **`user.py`**: Contiene `UserCreate` (validación de registros), `User` (representación pública de usuarios) y `UserInDB` (modelo de base de datos con hashes). Valida la fortaleza de contraseñas y limita estrictamente los roles permitidos (`operativo`, `administrador`).
+- **`request.py`**: Define `AuthRequest` y `RequestStatus` para encapsular los expedientes presentados a evaluación. Ofrece validaciones de longitud mínima de póliza e identificadores de paciente y métodos de transición de estados.
+- **`decision.py`**: Contiene `ConfidenceScore` (que representa un punto evaluado) y `DecisionResult` (que representa el informe de decisión final).
+- **`response.py`**: Define `AuthResponse` (el pre-chequeo del simulador) y `Decision` (la carta de apelación estructurada).
+- **`audit.py`**: Define `AuditLog` y `HIPAACompliance` para rastrear las actividades del sistema de acuerdo con los estándares federales de privacidad de información en salud.
+
+### 2. Renombramiento Profesional y Compatibilidad Absoluta (Agnosticismo de Nombres)
+Todos los campos internos se reestructuraron con nombres más descriptivos y profesionales. No obstante, para asegurar la interoperabilidad con CrewAI y el resto del sistema, se implementaron mecanismos híbridos avanzados:
+- **Configuración de Alias**: Uso de `validation_alias` y `serialization_alias` junto con `populate_by_name=True` y `serialize_by_alias=True` en `ConfigDict` de Pydantic v2. Esto garantiza que la inicialización y el volcado en formato JSON o diccionario `.model_dump()` sigan exponiendo las llaves originales requeridas por otros módulos (por ejemplo, en el generador de PDF de ReportLab o los dataframes del frontend).
+- **Resolución Dinámica de Atributos (`__getattr__` y `@property`)**: Se implementó una resolución en cascada que intercepta el acceso a atributos tradicionales (`subject`, `patient_name`, `missing_critical_items`, etc.) y los mapea de forma transparente a los nuevos nombres profesionales (`appeal_subject`, `full_patient_name`, `critical_absent_items`, etc.), previniendo excepciones en los tests automatizados y el software cliente.
+- **Envoltura en `schemas.py`**: El archivo `schemas.py` original se preserva como un envoltorio de importaciones que expone los nuevos modelos bajo sus nombres originales sin introducir código duplicado ni dependencias circulares.
