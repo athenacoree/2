@@ -1,10 +1,20 @@
+databases:
+  - name: med-auth-db
+    databaseName: med_auth_db
+    user: med_auth_user
+    plan: free
+
 services:
   - type: web
     name: med-auth-agent
     env: python
-    buildCommand: "pip install uv && uv pip install -e ."
+    buildCommand: "pip install uv && uv pip install -e . && uv pip install psycopg2-binary bcrypt"
     startCommand: "uv run streamlit run src/med_auth_agent/app.py --server.port $PORT --server.address 0.0.0.0"
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: med-auth-db
+          property: connectionString
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
