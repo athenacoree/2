@@ -106,26 +106,53 @@ class TestMedAuthAgent(unittest.TestCase):
             self.assertTrue(os.path.exists(appeal_pdf_path))
 
     def test_fallback_on_parse_error_prevention(self):
-        raw_invalid_response = "This is not valid JSON at all. It is just raw text from the LLM."
-        with self.assertRaises(json.JSONDecodeError):
-            json.loads(raw_invalid_response)
+        from unittest.mock import MagicMock
+        import logging
+        from med_auth_agent.analysis_runner import run_analysis_with_retry
+        from med_auth_agent.crew import MedAuthAgent
 
         log_file = "med_auth_errors.log"
         if os.path.exists(log_file):
             os.remove(log_file)
 
-        import pandas as pd
-        last_exception = "JSONDecodeError: Expecting value: line 1 column 1"
-        with open(log_file, "a", encoding="utf-8") as log_f:
-            log_f.write(f"--- ERROR AT {pd.Timestamp.now()} ---\n")
-            log_f.write(f"Exception: {str(last_exception)}\n")
-            log_f.write(f"Raw LLM Response: {str(raw_invalid_response)}\n\n")
+        # Mock the crew and kickoff calls to return invalid JSON
+        mock_crew = MagicMock()
+        mock_kickoff_result = MagicMock()
+        mock_kickoff_result.raw = "This is definitely not valid JSON at all."
+        mock_crew.kickoff.return_value = mock_kickoff_result
 
+        old_key = os.environ.get("OPENAI_API_KEY")
+        os.environ["OPENAI_API_KEY"] = "mock-openai-key"
+
+        try:
+            agent_system = MedAuthAgent()
+        finally:
+            if old_key is None:
+                del os.environ["OPENAI_API_KEY"]
+            else:
+                os.environ["OPENAI_API_KEY"] = old_key
+        agent_system.crew = MagicMock(return_value=mock_crew)
+
+        # Capture logging of exception
+        with self.assertLogs(level="ERROR") as log_context:
+            result = run_analysis_with_retry(agent_system, max_attempts=3)
+
+        # 1. Verify it re-tried the expected number of times (3)
+        self.assertEqual(agent_system.crew.call_count, 3)
+
+        # 2. Verify result is None (no fake data or partial save)
+        self.assertIsNone(result)
+
+        # 3. Verify logging.exception captured the parsing error
+        log_messages = "".join(log_context.output)
+        self.assertIn("Error en intento de parseo de JSON en pipeline asíncrono", log_messages)
+
+        # 4. Verify the failure is logged to med_auth_errors.log
         self.assertTrue(os.path.exists(log_file))
         with open(log_file, "r", encoding="utf-8") as f:
             log_content = f.read()
-            self.assertIn("Raw LLM Response", log_content)
-            self.assertIn("JSONDecodeError", log_content)
+            self.assertIn("This is definitely not valid JSON at all.", log_content)
+            self.assertIn("Expecting value", log_content)
 
 if __name__ == "__main__":
     unittest.main()
